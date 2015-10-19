@@ -3,6 +3,7 @@
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
@@ -15,7 +16,7 @@ import net.gslab.entity.News;
 import net.gslab.entity.User;
 import net.gslab.service.NewsService;
 import net.gslab.setting.CommonConstant;
-import net.gslab.setting.Page;
+import net.gslab.setting.PageBean;
 
 import org.springframework.ui.Model;
 import org.springframework.stereotype.Controller;
@@ -23,9 +24,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
 
 @Controller(value="newsController")
-@RequestMapping("/view")
+@RequestMapping("/news")
 public class NewsController extends BaseController{
 
 	@Resource(name="newsServiceImpl")
@@ -35,85 +37,56 @@ public class NewsController extends BaseController{
 	//github测试2，2015年7月3日22:17:13
 	//github测试3，2015年7月3日22:38:42
 	
-	//添加新闻
-	@RequestMapping("/add")
-	public void addNews(){
-		System.out.println("in the NewsController");
-		News news = new News();
-		Date date = new Date();//date.toString()输出格林威治时间
-		System.out.println(date);
-		String strDate = new SimpleDateFormat("yyyy-MM-dd").format(date);
-		System.out.println(strDate);
-		//news.setNewsId(1);
-		news.setContent("first news test");
-		news.setPublishDate(strDate);
-		news.setPublishName("关振宇");
-		//该外键不存在会报错：Cannot add or update a child row: a foreign key constraint fails (`model`.`t_news`, CONSTRAINT `newsPublisher` FOREIGN KEY (`publishName`) REFERENCES `t_user` (`userName`))
-		
-		newsService.save(news);
-	}
+	
 	
 	//从后台添加新闻
-	@RequestMapping(value="/addNews",method=RequestMethod.POST)
-	public @ResponseBody String addNews2(String newsName,String publishName,String content)
+	@RequestMapping(value="/add")
+	public @ResponseBody String add(News news,HttpServletRequest request)
 	{
-		News news=new News();
+		if(news==null) return "error";
 		//进行格式判断,先判断是否为空
-		if(newsName.isEmpty()||publishName.isEmpty()||content.isEmpty())
+		if(getSessionType(request).equals("teacher"))
 		{
-			//System.out.print("发布新闻失败，新闻标题、新闻内容和发布者姓名不能为空！");
-			return "faild，newsName、 publishName and content can not be empty!";
+			news.setWho(0);
+			news.setPublishName(getSessionTeacher(request).getTeacherName());
+			news.setPublishId(getSessionTeacher(request).getTeacherId());
 		}
-		
-		// ? 应该进行判断:member中是否存在名字是publishName的人，但是这里暂时没写;  
-		
+		if(getSessionType(request).equals("admin"))
+		{
+			news.setWho(1);
+			news.setPublishName(getSessionAdmin(request).getAdminName());
+			news.setPublishId(getSessionAdmin(request).getAdminId());
+		}
 		//获取当前时间
 		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
-		String time=df.format(new Date()).toString();
-		System.out.print("发布此新闻的时间："+time);	
-		
-		//给News赋值
-		news.setContent(content);
-		news.setNewsName(newsName);
-		news.setPublishName(publishName);
+		String time=df.format(new Date());
 		news.setPublishDate(time);
-		
-		//获取当前新闻的总数目，加1后，给news.NewsId赋值,然后发布新闻
-		if(news!=null)
-		{
-			int id= newsService.listNews().size()+1;
-			news.setNewsId(id);
-			newsService.save(news);
-			return "success!";
-		}
-		return "sorry,faild!";
+		newsService.save(news);
+		return "success";
 	}
 	
 	//分页例子，
-       @RequestMapping(value = "/getPage", method = RequestMethod.GET)
-	   public @ResponseBody List<News>  list(HttpServletRequest request,
-			HttpServletResponse response,@RequestParam(value="pageIndex")Integer pageIndex) {
+       @RequestMapping(value = "/getPage")
+	   public ModelAndView getPage(Integer pg) {
 		/**
 		 * @param pageIndex   请求的页码
          * @param pageSize   每页的记录条数
          * @param 
 		 */
 		//return newsService.getPage(pageIndex);  //使用默认的pageSize
-    	Page page=newsService.getPage("from News n order by n.publishDate desc",pageIndex,12);  //自定义pageSize为2 
-    	List<News> data=page.getData();
-    	for(int i=0;i<data.size();i++)
-		{
-			News temp=data.get(i);
-			temp.setContent(null);
-		}		
-		 List list_temp=page.getData();
-		 list_temp.add(page.getTotalCount());
-		 return  list_temp;
+    	int pageIndex;
+    	if(pg==null) pageIndex=1;
+    	else pageIndex=pg;
+    	PageBean page=newsService.getPage("from News n order by n.publishDate desc",pageIndex);  //自定义pageSize为2 
+    	ModelAndView mav=new ModelAndView("/view_admin/m_newsList.jsp");
+		PageBean pageBean=newsService.getPage(pageIndex);
+		mav.addObject("pageBean",pageBean);
+		return mav;
 	}
         //分页2，返回分页，附带新闻总数，已测试，可以使用；
         //参数pageIndex指定是第几页
        @RequestMapping(value = "/getPage_2", method = RequestMethod.GET)
-       public @ResponseBody Page<News> list2(HttpServletRequest request,
+       public @ResponseBody PageBean<News> list2(HttpServletRequest request,
    			HttpServletResponse response,@RequestParam(value="pageIndex")Integer pageIndex,  int pageSize)
    			{
     	   /**
@@ -121,7 +94,7 @@ public class NewsController extends BaseController{
             * @param pageSize   每页的记录条数
             * @param 
    		 */
-    	   Page page=newsService.getPage("from News n order by n.publishDate desc",pageIndex,pageSize);  
+    	   PageBean page=newsService.getPage("from News n order by n.publishDate desc",pageIndex,pageSize);  
     	   return page;
    			}
        
@@ -143,7 +116,7 @@ public class NewsController extends BaseController{
          * @param pageSize   每页的记录条数
          * @param 
 		 */
-    	Page page=newsService.getPage("from News n order by n.publishDate desc",1,9); 	//按日期排序	
+    	PageBean page=newsService.getPage("from News n order by n.publishDate desc",1,9); 	//按日期排序	
 		List<News> data=page.getData();
 		//把不用的属性设置为null(主要是content，其余占用的空间小，减少占用的带宽)
 		for(int i=0;i<data.size();i++)
@@ -165,17 +138,21 @@ public class NewsController extends BaseController{
          * @param pageSize   每页的记录条数 
          * @param 
 		 */ 
-    	Page page=newsService.getPage("from News n order by n.publishDate desc",1,3); 	//按日期排序	
+    	PageBean page=newsService.getPage("from News n order by n.publishDate desc",1,3); 	//按日期排序	
 		return page.getData();
 	}
        
     //删除新闻,前台传入ID，根据ID删除新闻，删除后，检验是否删除成功
-   	@RequestMapping("/deleteByID")
-   	public void delNews(int id){
-   		System.out.println("in the NewsController");
-   		//News news = new News();  		
-   		newsService.delete(id) ;
-   	}
+   	@RequestMapping("/delete")
+   	public void delete(int []id,HttpServletResponse response) throws IOException
+	{
+		if(id!=null)
+		{
+			for(int i=0;i<id.length;i++)
+				newsService.delete(id[i]);
+		}
+		response.getWriter().print("删除成功");
+	}
    	
   //返回全部新闻 ，返回json串，这就是一个测试
    	@RequestMapping(value="/newsList") 
@@ -187,12 +164,19 @@ public class NewsController extends BaseController{
 	}
 
 	//根据新闻id，获得数据库中的新闻
-	@RequestMapping(value ="/getByID",method = RequestMethod.GET)
-	public @ResponseBody News getByID(HttpServletRequest request,
-			HttpServletResponse response,@RequestParam(value="id")Integer id)//id是指新闻id，
+	@RequestMapping(value ="/getByID")
+	public @ResponseBody News getByID(int id)
 	{
-		System.out.println(id);
-		return newsService.getByID(id);
+		return newsService.get(id);
+	}
+	@RequestMapping(value ="/detail")
+	public ModelAndView detail(int id)
+	{
+		ModelAndView mav =new ModelAndView("/view_all/news_detail.jsp");
+		
+		News n=newsService.get(id);
+		mav.addObject("ele", n);
+		return mav;
 	}
 	
 }

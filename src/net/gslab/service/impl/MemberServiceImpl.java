@@ -16,7 +16,6 @@ import net.gslab.service.MemberService;
 @Service("memberServiceImpl")
 public class MemberServiceImpl extends BaseServiceImpl<Member> implements MemberService{
 
-	@Resource(name="memberDaoImpl")
 	private MemberDao memberDao;
 	
 /*	@Override
@@ -32,8 +31,8 @@ public class MemberServiceImpl extends BaseServiceImpl<Member> implements Member
 	}
 	@Resource(name = "memberDaoImpl")
 	public void setMemberDao(MemberDao memberDao) {
+		this.memberDao=memberDao;
 		super.setBaseDao(memberDao);
-		this.memberDao = memberDao;
 	}
 
 	public List<Member> listMembers(String groupName){
@@ -84,5 +83,12 @@ public class MemberServiceImpl extends BaseServiceImpl<Member> implements Member
 		// TODO Auto-generated method stub
 		Member entity = memberDao.load(id);
 		return memberDao.remove(entity);
+	}
+	
+	@Override
+	public Member getByID(int id) {
+		// TODO Auto-generated method stub
+		return memberDao.get(id);	
+
 	}
 }

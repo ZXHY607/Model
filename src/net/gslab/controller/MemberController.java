@@ -18,7 +18,7 @@ import net.gslab.dao.MemberDao;
 import net.gslab.entity.Member;
 import net.gslab.entity.Member.Category;
 import net.gslab.service.MemberService;
-import net.gslab.setting.Page;
+import net.gslab.setting.PageBean;
 import net.gslab.tools.Email;
 
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -102,7 +102,7 @@ public class MemberController extends BaseController{
 		@RequestMapping(value="/findAllMember",method=RequestMethod.GET)
 		public @ResponseBody List<Member> findmember(int i){
 			int totalCount=memberDao.getCount("from Member"); //获取学生总人数
-			Page page= memberService.getPage(i,totalCount);   //返回全部学生
+			PageBean page= memberService.getPage(i,totalCount);   //返回全部学生
 			int max=page.getPageSize();
 			List<Member> members=page.getData();
 			return members;
@@ -110,18 +110,35 @@ public class MemberController extends BaseController{
 		
 		//查找全部学生，按参数返回分页,测试通过。例子：”http://localhost:8080/Model/member/findOnePageMember?pageIndex=1&pageSize=5“
 		@RequestMapping(value="/findOnePageMember",method=RequestMethod.GET)
-		public @ResponseBody Page<Member> findOnePageMember(int pageIndex,int pageSize){
+		public @ResponseBody PageBean<Member> findOnePageMember(int pageIndex,int pageSize){
 			/**
 			 * 
 			 * @param pageIndex   请求的页码
 	         * @param pageSize   每页的记录条数
 	         * @param 
 			 */
-			Page page= memberService.getPage(pageIndex,pageSize);   //返回学生
+			PageBean page= memberService.getPage(pageIndex,pageSize);   //返回学生
 			/*List<Member> members=page.getData();*/
 			return page;
 		}		
-		
+		//查找全部学生，按参数返回分页,测试通过。例子：”http://localhost:8080/Model/member/findOnePageMember?pageIndex=1“
+		@RequestMapping(value="/getPage")
+		public ModelAndView getPage(String pg){
+			/**
+			 * 
+			 * @param pageIndex   请求的页码
+	         * @param pageSize   每页的记录条数
+	         * @param 
+			 */
+			int pageIndex;
+			if(pg==null) pageIndex=0;
+			else pageIndex=Integer.parseInt(pg);
+			PageBean pageBean= memberService.getPage(pageIndex);   //返回学生
+			ModelAndView mav=new ModelAndView("/view_admin/m_studentList.jsp");
+			mav.addObject("pageBean", pageBean);
+			/*List<Member> members=page.getData();*/
+			return mav;
+		}		
 		//返回totalsize，即数据库里面的学生总数,已测试，可以使用
 	       @RequestMapping(value = "/getTotalcount", method = RequestMethod.GET)
 	       public @ResponseBody  long getTotalcount()
@@ -135,7 +152,7 @@ public class MemberController extends BaseController{
 		{
 			System.out.println("in the action :setEmail  1");
 			ModelAndView mav = new ModelAndView();
-		    String toUrl="/jsp/t_setEmailResult.jsp";     //设置重定向
+		    String toUrl="../view_stu/test.jsp";     //设置重定向
 		    mav.setViewName("redirect:"+toUrl);
 			
 		   // System.out.println("in the action :setEmail  2");
@@ -166,7 +183,7 @@ public class MemberController extends BaseController{
 		{			
 			//System.out.println("in the action :activeEmail_send  1");
 		    ModelAndView mav = new ModelAndView();
-	        String toUrl="/jsp/test_activeEmailResult.jsp";     //设置重定向
+	        String toUrl="../view_stu/test.jsp";     //设置重定向
 	        mav.setViewName("redirect:"+toUrl);
 	        
 		    Member login_member=this.getSessionMember(request);//从session中获取已登陆用户的信息
@@ -226,7 +243,7 @@ public class MemberController extends BaseController{
 		System.out.println("in the modifyMember action!");
 
 		ModelAndView mav = new ModelAndView();
-		String toUrl="/jsp/t_modifyMemberResult.jsp";        //设置重定向
+		String toUrl="../view_stu/test.jsp";        //设置重定向
 		mav.setViewName("redirect:"+toUrl);                  //设置重定向
 		
         Member login_member=this.getSessionMember(request);//从session中获取已登陆用户的信息
@@ -269,7 +286,7 @@ public class MemberController extends BaseController{
 	public  ModelAndView changePass(HttpServletRequest request,String password,String passwordNew,String passwordNew2)
 	{
 		ModelAndView mav = new ModelAndView();
-		String toUrl="/jsp/t_modifyPassword_1_result.jsp";        //设置重定向
+		String toUrl="../view_stu/test.jsp";        //设置重定向
 		mav.setViewName("redirect:"+toUrl);                  //设置重定向
 
 		Member member=this.getSessionMember(request);//从session中获取已登陆用户的信息
